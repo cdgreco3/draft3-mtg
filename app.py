@@ -3,18 +3,44 @@ from flask_cors import CORS
 import pandas as pd
 import json
 import random
+import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-with open("default-cards.json", "r", encoding="utf-8") as f:
-    bulk_cards = json.load(f)
+
+def load_bulk_data():
+    bulk_file = "default-cards.json"
+    if not os.path.exists(bulk_file):
+        print("Downloading Scryfall bulk data...")
+        bulk_data_url = "https://api.scryfall.com/bulk-data"
+        response = requests.get(bulk_data_url)
+        bulk_data = response.json()
+        
+        default_cards_url = None
+        for item in bulk_data['data']:
+            if item['type'] == 'default_cards':
+                default_cards_url = item['download_uri']
+                break
+        
+        if default_cards_url:
+            print(f"Downloading from {default_cards_url}")
+            response = requests.get(default_cards_url)
+            with open(bulk_file, 'w', encoding='utf-8') as f:
+                json.dump(response.json(), f, ensure_ascii=False, indent=2)
+    
+    with open(bulk_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+bulk_cards = load_bulk_data()
 
 bulk_index = {card["name"].lower(): card for card in bulk_cards}
 
+
 stored_df = None
 
-# Constants
+
 EXCLUDED_LAYOUTS = {
     "planar", "scheme", "vanguard", "token", "emblem", "double_faced_token",
     "art_series", "adventure", "augment", "split", "flip", "class"
