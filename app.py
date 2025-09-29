@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request, make_response, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 import json
@@ -6,7 +6,7 @@ import random
 import requests
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 CORS(app)
 
 
@@ -319,11 +319,6 @@ def enhance_card_data(card_row):
     return enhanced_data
 
 
-@app.route("/")
-def home():
-    return jsonify({"message": "MTG Draft Simulator API"}), 200
-
-
 @app.route("/upload", methods=["POST"])
 def upload():
     global stored_df
@@ -518,6 +513,17 @@ def draft_cards_csv():
     response.headers["Content-Type"] = "text/csv"
     
     return response
+
+
+@app.route('/')
+def serve_react():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
 
 
 if __name__ == "__main__":
